@@ -1,5 +1,5 @@
+use macroquad::prelude::*;
 use std::collections::{VecDeque, HashSet};
-use std::fmt;
 
 // 迷宫单元格类型
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -10,15 +10,6 @@ enum Cell {
     End,      // 终点
     Path,     // 路径标记
     Player,   // 玩家
-}
-
-// 方向枚举
-#[derive(Debug, Clone, Copy)]
-enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
 }
 
 // 位置结构体
@@ -36,6 +27,9 @@ struct MazeGame {
     end_pos: Position,
     width: usize,
     height: usize,
+    show_path: bool,
+    path_positions: Vec<Position>,
+    game_won: bool,
 }
 
 impl MazeGame {
@@ -52,21 +46,45 @@ impl MazeGame {
             grid[height - 1][j] = Cell::Wall;
         }
         
-        // 添加一些内部墙
-        for i in 2..height-2 {
-            if i % 3 == 0 {
-                for j in 2..width-2 {
-                    if j % 4 == 0 {
-                        grid[i][j] = Cell::Wall;
-                    }
+        // 创建一个有解的复杂迷宫
+        // 使用预定义的迷宫布局
+        let maze_layout = [
+            "####################",
+            "#S                 #",
+            "# ##### ##### ##### #",
+            "# #   # #   # #   # #",
+            "# # ### # ### # ### #",
+            "# #   # #   # #   # #",
+            "# ##### ##### ##### #",
+            "# #   #     #     # #",
+            "# # # ##### # ##### #",
+            "# # #     # #     # #",
+            "# # ##### # ##### # #",
+            "# #     # #     # # #",
+            "# ##### # ##### # # #",
+            "#       #       #   E#",
+            "####################",
+        ];
+        
+        // 将字符串布局转换为网格
+        for (y, line) in maze_layout.iter().enumerate() {
+            for (x, ch) in line.chars().enumerate() {
+                if y < height && x < width {
+                    grid[y][x] = match ch {
+                        '#' => Cell::Wall,
+                        'S' => Cell::Start,
+                        'E' => Cell::End,
+                        _ => Cell::Empty,
+                    };
                 }
             }
         }
         
-        // 设置起点和终点
+        // 设置起点和终点位置
         let start_pos = Position { x: 1, y: 1 };
         let end_pos = Position { x: width - 2, y: height - 2 };
         
+        // 确保起点和终点位置正确
         grid[start_pos.y][start_pos.x] = Cell::Start;
         grid[end_pos.y][end_pos.x] = Cell::End;
         
@@ -77,6 +95,9 @@ impl MazeGame {
             end_pos,
             width,
             height,
+            show_path: false,
+            path_positions: Vec::new(),
+            game_won: false,
         };
         
         game.update_player_position(start_pos);
@@ -95,6 +116,11 @@ impl MazeGame {
         // 设置新位置
         self.player_pos = new_pos;
         self.grid[new_pos.y][new_pos.x] = Cell::Player;
+        
+        // 检查是否获胜
+        if self.player_pos == self.end_pos {
+            self.game_won = true;
+        }
     }
     
     // 碰撞检测
@@ -110,34 +136,31 @@ impl MazeGame {
     }
     
     // 移动玩家
-    fn move_player(&mut self, direction: Direction) -> bool {
-        let new_pos = match direction {
-            Direction::Up if self.player_pos.y > 0 => {
-                Position { x: self.player_pos.x, y: self.player_pos.y - 1 }
-            }
-            Direction::Down => {
-                Position { x: self.player_pos.x, y: self.player_pos.y + 1 }
-            }
-            Direction::Left if self.player_pos.x > 0 => {
-                Position { x: self.player_pos.x - 1, y: self.player_pos.y }
-            }
-            Direction::Right => {
-                Position { x: self.player_pos.x + 1, y: self.player_pos.y }
-            }
-            _ => return false,
-        };
-        
-        if self.can_move(new_pos) {
-            self.update_player_position(new_pos);
-            true
-        } else {
-            false
+    fn move_player(&mut self, dx: i32, dy: i32) -> bool {
+        if self.game_won {
+            return false;
         }
+        
+        let new_x = self.player_pos.x as i32 + dx;
+        let new_y = self.player_pos.y as i32 + dy;
+        
+        if new_x >= 0 && new_y >= 0 {
+            let new_pos = Position { 
+                x: new_x as usize, 
+                y: new_y as usize 
+            };
+            
+            if new_pos.x < self.width && new_pos.y < self.height && self.can_move(new_pos) {
+                self.update_player_position(new_pos);
+                return true;
+            }
+        }
+        false
     }
     
     // 检查是否获胜
     fn has_won(&self) -> bool {
-        self.player_pos == self.end_pos
+        self.game_won
     }
     
     // 使用BFS寻找最短路径
@@ -199,99 +222,179 @@ impl MazeGame {
     // 显示路径
     fn display_path(&mut self) {
         if let Some(path) = self.find_shortest_path() {
-            for pos in path {
-                if self.grid[pos.y][pos.x] == Cell::Empty {
-                    self.grid[pos.y][pos.x] = Cell::Path;
-                }
-            }
+            self.path_positions = path;
+            self.show_path = true;
         }
     }
     
     // 清除路径显示
     fn clear_path(&mut self) {
-        for i in 0..self.height {
-            for j in 0..self.width {
-                if self.grid[i][j] == Cell::Path {
-                    self.grid[i][j] = Cell::Empty;
+        self.show_path = false;
+        self.path_positions.clear();
+    }
+    
+    // 切换路径显示
+    fn toggle_path(&mut self) {
+        if self.show_path {
+            self.clear_path();
+        } else {
+            self.display_path();
+        }
+    }
+    
+    // 重置游戏
+    fn reset_game(&mut self) {
+        *self = MazeGame::new(self.width, self.height);
+    }
+    
+    // 渲染游戏
+    fn render(&self, font: Option<&Font>) {
+        const CELL_SIZE: f32 = 30.0;
+        
+        // 绘制网格
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let pos_x = x as f32 * CELL_SIZE;
+                let pos_y = y as f32 * CELL_SIZE;
+                
+                // 跳过玩家位置，稍后单独绘制
+                if self.grid[y][x] == Cell::Player {
+                    continue;
                 }
-            }
-        }
-    }
-}
-
-impl fmt::Display for MazeGame {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for row in &self.grid {
-            for cell in row {
-                let symbol = match cell {
-                    Cell::Empty => " ",
-                    Cell::Wall => "█",
-                    Cell::Start => "S",
-                    Cell::End => "E",
-                    Cell::Path => "·",
-                    Cell::Player => "P",
+                
+                let color = match self.grid[y][x] {
+                    Cell::Wall => DARKGRAY,
+                    Cell::Empty => LIGHTGRAY,
+                    Cell::Start => GREEN,
+                    Cell::End => RED,
+                    Cell::Path => LIGHTGRAY,
+                    Cell::Player => BLUE,
                 };
-                write!(f, "{}", symbol)?;
+                
+                draw_rectangle(pos_x, pos_y, CELL_SIZE, CELL_SIZE, color);
+                
+                // 绘制网格线
+                draw_rectangle_lines(pos_x, pos_y, CELL_SIZE, CELL_SIZE, 1.0, BLACK);
             }
-            writeln!(f)?;
         }
-        Ok(())
+        
+        // 绘制路径
+        if self.show_path {
+            for &pos in &self.path_positions {
+                // 跳过玩家所在的位置，避免覆盖玩家
+                if pos == self.player_pos {
+                    continue;
+                }
+                let pos_x = pos.x as f32 * CELL_SIZE;
+                let pos_y = pos.y as f32 * CELL_SIZE;
+                draw_rectangle(pos_x, pos_y, CELL_SIZE, CELL_SIZE, YELLOW);
+            }
+        }
+        
+        // 最后绘制玩家，确保它在最上层
+        let player_pos_x = self.player_pos.x as f32 * CELL_SIZE;
+        let player_pos_y = self.player_pos.y as f32 * CELL_SIZE;
+        draw_rectangle(player_pos_x, player_pos_y, CELL_SIZE, CELL_SIZE, BLUE);
+        
+        // 绘制文本说明
+        let instructions = [
+            "Use WASD to move",
+            "Press P to show/hide path",
+            "Press R to reset game",
+        ];
+        
+        for (i, instruction) in instructions.iter().enumerate() {
+            if let Some(font) = font {
+                draw_text_ex(
+                    instruction,
+                    10.0,
+                    (self.height as f32 * CELL_SIZE) + 30.0 + (i as f32 * 25.0),
+                    TextParams {
+                        font: Some(font),
+                        font_size: 20,
+                        color: BLACK,
+                        ..Default::default()
+                    },
+                );
+            } else {
+                draw_text(
+                    instruction,
+                    10.0,
+                    (self.height as f32 * CELL_SIZE) + 30.0 + (i as f32 * 25.0),
+                    20.0,
+                    BLACK,
+                );
+            }
+        }
+        
+        if self.game_won {
+            let win_message = "Congratulations! You won! Press R to restart";
+            if let Some(font) = font {
+                draw_text_ex(
+                    win_message,
+                    10.0,
+                    (self.height as f32 * CELL_SIZE) + 30.0 + (3 as f32 * 25.0),
+                    TextParams {
+                        font: Some(font),
+                        font_size: 20,
+                        color: BLACK,
+                        ..Default::default()
+                    },
+                );
+            } else {
+                draw_text(
+                    win_message,
+                    10.0,
+                    (self.height as f32 * CELL_SIZE) + 30.0 + (3 as f32 * 25.0),
+                    20.0,
+                    BLACK,
+                );
+            }
+        }
     }
 }
 
-// 游戏控制函数
-fn play_game() {
-    let mut game = MazeGame::new(15, 10);
+#[macroquad::main("Maze Game")]
+async fn main() {
+    let width = 20;
+    let height = 15;
     
-    println!("=== 迷宫游戏 ===");
-    println!("使用 WASD 移动玩家(P)");
-    println!("从起点(S)移动到终点(E)");
-    println!("输入 'path' 显示最短路径");
-    println!("输入 'clear' 清除路径");
-    println!("输入 'quit' 退出游戏");
-    println!();
+    let mut game = MazeGame::new(width, height);
     
-    let mut input = String::new();
+    // 尝试加载字体
+    let font = load_ttf_font("assets/FiraSans-Regular.ttf").await.ok();
     
     loop {
-        println!("{}", game);
+        clear_background(WHITE);
         
-        if game.has_won() {
-            println!("恭喜！你赢了！");
-            break;
+        // 处理输入
+        if is_key_pressed(KeyCode::P) {
+            game.toggle_path();
         }
         
-        println!("请输入命令 (WASD/path/clear/quit): ");
-        input.clear();
-        std::io::stdin().read_line(&mut input).unwrap();
-        let command = input.trim().to_lowercase();
-        
-        match command.as_str() {
-            "w" => { game.move_player(Direction::Up); }
-            "s" => { game.move_player(Direction::Down); }
-            "a" => { game.move_player(Direction::Left); }
-            "d" => { game.move_player(Direction::Right); }
-            "path" => { 
-                game.display_path();
-                println!("已显示最短路径");
-            }
-            "clear" => { 
-                game.clear_path();
-                println!("已清除路径显示");
-            }
-            "quit" => {
-                println!("游戏结束！");
-                break;
-            }
-            _ => println!("无效命令！"),
+        if is_key_pressed(KeyCode::R) {
+            game.reset_game();
         }
         
-        println!();
+        // 按键移动处理
+        if is_key_pressed(KeyCode::W) {
+            game.move_player(0, -1);
+        }
+        if is_key_pressed(KeyCode::S) {
+            game.move_player(0, 1);
+        }
+        if is_key_pressed(KeyCode::A) {
+            game.move_player(-1, 0);
+        }
+        if is_key_pressed(KeyCode::D) {
+            game.move_player(1, 0);
+        }
+        
+        // 渲染游戏
+        game.render(font.as_ref());
+        
+        next_frame().await
     }
-}
-
-fn main() {
-    play_game();
 }
 
 #[cfg(test)]
@@ -300,23 +403,21 @@ mod tests {
 
     #[test]
     fn test_maze_creation() {
-        let game = MazeGame::new(10, 10);
-        assert_eq!(game.grid[1][1], Cell::Player); // 玩家在起点
-        assert_eq!(game.grid[8][8], Cell::End);    // 终点在右下角
+        let game = MazeGame::new(20, 15);
+        assert_eq!(game.grid[1][1], Cell::Player);
+        assert_eq!(game.grid[13][18], Cell::End);
     }
 
     #[test]
     fn test_collision_detection() {
-        let game = MazeGame::new(10, 10);
-        // 测试墙碰撞
-        assert!(!game.can_move(Position { x: 0, y: 0 })); // 角落墙
-        // 测试空地移动
-        assert!(game.can_move(Position { x: 1, y: 2 })); // 空地
+        let game = MazeGame::new(20, 15);
+        assert!(!game.can_move(Position { x: 0, y: 0 }));
+        assert!(game.can_move(Position { x: 1, y: 2 }));
     }
 
     #[test]
     fn test_path_finding() {
-        let game = MazeGame::new(10, 10);
+        let game = MazeGame::new(20, 15);
         let path = game.find_shortest_path();
         assert!(path.is_some(), "应该能找到路径");
     }

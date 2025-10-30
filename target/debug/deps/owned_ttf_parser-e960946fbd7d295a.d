@@ -1,0 +1,10 @@
+D:\rust\maze_game\target\debug\deps\owned_ttf_parser-e960946fbd7d295a.d: C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\lib.rs C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\convert.rs C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\owned.rs C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\preparse.rs
+
+D:\rust\maze_game\target\debug\deps\libowned_ttf_parser-e960946fbd7d295a.rlib: C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\lib.rs C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\convert.rs C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\owned.rs C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\preparse.rs
+
+D:\rust\maze_game\target\debug\deps\libowned_ttf_parser-e960946fbd7d295a.rmeta: C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\lib.rs C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\convert.rs C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\owned.rs C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\preparse.rs
+
+C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\lib.rs:
+C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\convert.rs:
+C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\owned.rs:
+C:\Users\Administrator\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\owned_ttf_parser-0.15.2\src\preparse.rs:
